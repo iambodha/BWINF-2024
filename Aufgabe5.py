@@ -1,90 +1,97 @@
 import requests
-
 URL_AUFGABE = "https://bwinf.de/fileadmin/wettbewerbe/bundeswettbewerb/43/1_runde/grabmal4.txt"
-
-
 GRABMAL_DATA = requests.get(URL_AUFGABE).text
 GRABMAL_DATA_GETRENNT = GRABMAL_DATA.splitlines()
 GRABMAL_DATA_LIST = values = list(map(int, GRABMAL_DATA_GETRENNT))
-
-
 ANZAHL_QUADER = GRABMAL_DATA_LIST[0]
 QUADER_FREQUENZ = GRABMAL_DATA_LIST[1:]
 
+def pruefeQuader(aktuelleZeit, aktuellerIndex):
+   quaderWert = aktuelleZeit//QUADER_FREQUENZ[aktuellerIndex]
+   if quaderWert % 2 == 0:
+       return False
+   else:
+       return True
 
-def doCheck(currentTime,currentIndex):
-    quaderValue = currentTime//QUADER_FREQUENZ[currentIndex]
-    if quaderValue % 2 == 0:
-        return False
-    else:
-        return True
+def pruefeFortschritt(aktuelleZeit, aktuellerIndex):
+   naechsterQuaderWert1 = (aktuelleZeit//QUADER_FREQUENZ[aktuellerIndex-1]+1)*QUADER_FREQUENZ[aktuellerIndex-1]
+   naechsterQuaderWert2 = (aktuelleZeit//QUADER_FREQUENZ[aktuellerIndex]+1)*QUADER_FREQUENZ[aktuellerIndex]
+   if naechsterQuaderWert1 > naechsterQuaderWert2:
+       return True
+   else:
+       return False
 
-def advanceCheck(currentTime,currentIndex):
-    nextQuaderValue1 = (currentTime//QUADER_FREQUENZ[currentIndex-1]+1)*QUADER_FREQUENZ[currentIndex-1]
-    nextQuaderValue2 = (currentTime//QUADER_FREQUENZ[currentIndex]+1)*QUADER_FREQUENZ[currentIndex]
-    if nextQuaderValue1 > nextQuaderValue2:
-        return True
-    else:
-        return False
+def rueckwaertsPropagatione(schrittListe, aktuellerIndex):
+   if aktuellerIndex == 0:
+       return False
+   
+   naechsterQuaderWert1 = (schrittListe[aktuellerIndex-1]//QUADER_FREQUENZ[aktuellerIndex-1]+2)*QUADER_FREQUENZ[aktuellerIndex-1]
+   naechsterQuaderWert2 = (schrittListe[aktuellerIndex-2]//QUADER_FREQUENZ[aktuellerIndex-2]+1)*QUADER_FREQUENZ[aktuellerIndex-2]
+   if naechsterQuaderWert1 < naechsterQuaderWert2:
+       return False
+   else:
+       return True
 
-def backPropagation(stepList,currentIndex):
-    if currentIndex == 0:
-        return False
-    
-    nextQuaderValue1 = (stepList[currentIndex-1]//QUADER_FREQUENZ[currentIndex-1]+2)*QUADER_FREQUENZ[currentIndex-1]
-    nextQuaderValue2 = (stepList[currentIndex-2]//QUADER_FREQUENZ[currentIndex-2]+1)*QUADER_FREQUENZ[currentIndex-2]
-    print(currentIndex,stepList,nextQuaderValue1,nextQuaderValue2)
-    if nextQuaderValue1 < nextQuaderValue2:
-        return False
-    else:
-        return True
+def rueckwaertsPropagatioSchleife(schrittListe, aktuellerIndex):
+   tempSchrittListe = schrittListe.copy()
+   while True:
+       if rueckwaertsPropagatione(schrittListe, aktuellerIndex) == False:
+           if len(schrittListe) == 0:
+               schrittListe.append((tempSchrittListe[aktuellerIndex]//QUADER_FREQUENZ[aktuellerIndex]+2)*QUADER_FREQUENZ[aktuellerIndex])
+               aktuellerIndex += 1
+           else:
+               quaderWert = (schrittListe[aktuellerIndex-1]//QUADER_FREQUENZ[aktuellerIndex-1]+2)*QUADER_FREQUENZ[aktuellerIndex-1]
+               schrittListe.pop()
+               schrittListe.append(quaderWert)
+           return schrittListe, aktuellerIndex
+       else:
+           aktuellerIndex -= 1
+           schrittListe.pop()
 
-def backPropagationLoop(stepList,currentIndex):
-    tempStepList = stepList.copy()
-    while True:
-        if backPropagation(stepList,currentIndex) == False:
-            print("Propagation is over")
-            print(stepList,currentIndex)
-            print(tempStepList)
-            if len(stepList) == 0:
-                stepList.append((tempStepList[currentIndex]//QUADER_FREQUENZ[currentIndex]+2)*QUADER_FREQUENZ[currentIndex])
-                print(tempStepList[currentIndex],QUADER_FREQUENZ[currentIndex])
-                currentIndex += 1
-            else:
-                quaderValue = (stepList[currentIndex-1]//QUADER_FREQUENZ[currentIndex-1]+2)*QUADER_FREQUENZ[currentIndex-1]
-                print(stepList[currentIndex-1],QUADER_FREQUENZ[currentIndex])
-                stepList.pop()
-                stepList.append(quaderValue)
-            print(stepList)
-            return stepList,currentIndex
-        else:
-            currentIndex -= 1
-            stepList.pop()
+def erstelleAnweisungen(zeitmarken):
+   anweisungen = []
+   anweisungen.append(f"Warte {zeitmarken[0]} Minuten, laufe in den Abschnitt 1")
+   for i in range(1, len(zeitmarken)):
+       warteMinuten = zeitmarken[i] - zeitmarken[i - 1]
+       anweisungen.append(f"Warte {warteMinuten} Minuten")
+       if i < len(zeitmarken) - 1:
+           anweisungen.append(f"laufe in den Abschnitt {i + 1}")
+       else:
+           anweisungen.append("laufe zum Grabmal")
+   
+   ergebnisListe = []
+   index = 0
 
-def recursiveAlgorithm():
-    currentIndex = 1
-    currentTime = QUADER_FREQUENZ[currentIndex-1]
-    stepList = [currentTime]
-    run = True
-    while run:
-        if doCheck(currentTime, currentIndex):
-            currentIndex += 1
-            stepList.append(currentTime)
-        elif advanceCheck(currentTime, currentIndex):
-            currentTime = (currentTime//QUADER_FREQUENZ[currentIndex]+1)*QUADER_FREQUENZ[currentIndex]
-            currentIndex += 1
-            stepList.append(currentTime)
-        else:
-            print("BEfore start algorithm")
-            print(currentIndex)
-            print(stepList)
-            print(QUADER_FREQUENZ)
-            stepList,currentIndex = backPropagationLoop(stepList,currentIndex)
-            currentTime = stepList[-1]
+   while index < len(anweisungen):
+       if anweisungen[index] == "Warte 0 Minuten":
+           if ergebnisListe:
+               ergebnisListe.pop()
+       else:
+           ergebnisListe.append(anweisungen[index])
+       index += 1
 
-        if currentIndex == ANZAHL_QUADER:
-            print(stepList)
-            print(currentTime)
-            break
+   anweisungen = ergebnisListe
+   return ', '.join(anweisungen)
 
-recursiveAlgorithm()
+def rekursiveAlgorithmus():
+  aktuellerIndex = 1
+  aktuelleZeit = QUADER_FREQUENZ[aktuellerIndex-1]
+  schrittListe = [aktuelleZeit]
+  while True:
+      if pruefeQuader(aktuelleZeit, aktuellerIndex):
+          aktuellerIndex += 1
+          schrittListe.append(aktuelleZeit)
+      elif pruefeFortschritt(aktuelleZeit, aktuellerIndex):
+          aktuelleZeit = (aktuelleZeit//QUADER_FREQUENZ[aktuellerIndex]+1)*QUADER_FREQUENZ[aktuellerIndex]
+          aktuellerIndex += 1
+          schrittListe.append(aktuelleZeit)
+      else:
+          schrittListe, aktuellerIndex = rueckwaertsPropagatioSchleife(schrittListe, aktuellerIndex)
+          aktuelleZeit = schrittListe[-1]
+      if aktuellerIndex == ANZAHL_QUADER:
+          print(schrittListe)
+          anweisungen = erstelleAnweisungen(schrittListe)
+          print(anweisungen)
+          break
+
+rekursiveAlgorithmus()
