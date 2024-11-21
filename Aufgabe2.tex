@@ -1,0 +1,337 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{graphicx}
+
+\geometry{a4paper, margin=2cm}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Aufgabe 2: Schwierigkeiten}
+\lhead{Team-ID: -----}
+\rfoot{Seite \thepage}
+
+\title{Aufgabe 2: Schwierigkeiten}
+\author{Team-ID: ----- \\ Team-Name: Super Secret \\ Bearbeiter dieser Aufgabe: Sigma}
+\date{\today}
+
+\lstdefinestyle{custompython}{
+    language=Python,
+    numbers=left,
+    stepnumber=1,
+    showstringspaces=false,
+    tabsize=4,
+    breaklines=true,
+    breakatwhitespace=true,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{orange},
+    basicstyle=\ttfamily\footnotesize,
+    morekeywords={*, with, as, None},
+}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Lösungsansatz}
+
+Unser Ziel ist es, eine sinnvolle Reihenfolge für eine Gruppe ausgewählter Aufgaben zu finden, basierend auf den Schwierigkeitsabstufungen aus früheren Klausuren. Dabei soll die Reihenfolge keine der vorgegebenen Schwierigkeitsverhältnisse verletzen. Außerdem müssen wir mögliche Konflikte erkennen, die durch widersprüchliche Anordnungen entstehen können.
+
+Hier ist unser Ansatz:
+
+\begin{enumerate}
+    \item \textbf{Darstellung als gerichteter Graph:} Jede ausgewählte Aufgabe wird als Knoten dargestellt. Eine gerichtete Kante von Aufgabe \( A \) zu Aufgabe \( B \) bedeutet, dass \( A \) leichter ist als \( B \) (\( A < B \)).
+    \item \textbf{Graph aufbauen:} Wir erstellen den Graphen nur mit den ausgewählten Aufgaben und den entsprechenden Schwierigkeitsabstufungen.
+    \item \textbf{Topologische Sortierung durchführen:} Wenn der Graph keine Zyklen enthält, können wir eine topologische Sortierung verwenden, um eine gültige Reihenfolge der Aufgaben zu bestimmen.
+    \item \textbf{Konflikte erkennen:} Sollte der Graph Zyklen enthalten, wissen wir, dass widersprüchliche Schwierigkeitsabstufungen vorliegen, und es ist keine gültige Reihenfolge möglich.
+    \item \textbf{Konsistente Ausgabe sicherstellen:} Durch das Sortieren der Knoten und der Warteschlange stellen wir sicher, dass die Ausgabe bei jedem Programmlauf gleich bleibt.
+\end{enumerate}
+
+Kurz gesagt, wir nutzen die topologische Sortierung, um eine Reihenfolge der Aufgaben zu finden, die alle Schwierigkeitsabstufungen respektiert. Falls das nicht möglich ist, erkennen wir durch das Auftreten von Zyklen, dass keine gültige Anordnung existiert.
+
+\section{Implementierung}
+
+Wir haben unser Programm in Python geschrieben. Die Umsetzung besteht aus mehreren Schritten:
+
+\subsection{Einlesen der Eingabedaten}
+
+Die Eingabedaten werden aus den bereitgestellten Dateien eingelesen. Jede Datei folgt einem bestimmten Format:
+
+\begin{itemize}
+    \item \textbf{Erste Zeile:} Drei positive ganze Zahlen \( n \), \( m \) und \( k \), die die Anzahl der Klausuren, die Gesamtzahl der Aufgaben und die Anzahl der ausgewählten Aufgaben angeben.
+    \item \textbf{Nächste \( n \) Zeilen:} Jede dieser Zeilen beschreibt die Schwierigkeitsabstufungen einer Klausur in Form von Ungleichungen, zum Beispiel \( A < B < C \).
+    \item \textbf{Letzte Zeile:} Eine Liste der \( k \) ausgewählten Aufgaben.
+\end{itemize}
+
+\subsection{Erstellen des Graphen}
+
+Wir bauen einen gerichteten Graphen auf, bei dem:
+
+\begin{itemize}
+    \item \textbf{Knoten:} Die ausgewählten Aufgaben.
+    \item \textbf{Kanten:} Eine Kante von \( A \) nach \( B \) existiert, wenn in den Ungleichungen \( A < B \) festgelegt ist.
+\end{itemize}
+
+Dabei achten wir darauf, dass nur die ausgewählten Aufgaben und deren Beziehungen im Graphen berücksichtigt werden.
+
+\subsection{Topologisches Sortieren}
+
+Wir verwenden Kahn's Algorithmus zur Durchführung der topologischen Sortierung:
+
+\begin{itemize}
+    \item Starten mit allen Knoten, die keinen eingehenden Kanten haben (Eingangsgrad Null).
+    \item Entfernen diese Knoten aus dem Graphen und fügen sie zur sortierten Reihenfolge hinzu.
+    \item Reduzieren den Eingangsgrad der benachbarten Knoten entsprechend.
+    \item Wiederholen, bis alle Knoten sortiert sind oder ein Zyklus erkannt wird.
+\end{itemize}
+
+Durch das Sortieren der Warteschlange und der Nachbarn stellen wir sicher, dass die Ausgabe bei jedem Durchlauf des Programms gleich bleibt.
+
+\subsection{Erkennung von Konflikten}
+
+Falls wir am Ende der Sortierung nicht alle ausgewählten Aufgaben sortieren konnten, bedeutet das, dass im Graphen ein Zyklus existiert. Ein solcher Zyklus deutet auf widersprüchliche Schwierigkeitsabstufungen hin, wodurch keine gültige Reihenfolge möglich ist.
+
+\section{Beispiele}
+
+Wir haben unser Programm mit verschiedenen Eingabedateien getestet, um sicherzustellen, dass es korrekt funktioniert.
+
+\subsection{Beispiel 1: \texttt{schwierigkeiten0.txt}}
+
+\textbf{Eingabe:}
+
+\begin{verbatim}
+4 7 5
+B < A < D < F
+D < F < G
+A < E < D < C
+G < F < C
+B C D E F
+\end{verbatim}
+
+\textbf{Ausgabe unseres Programms:}
+
+\begin{verbatim}
+E B D F C
+\end{verbatim}
+
+\textbf{Erklärung:}
+
+Die Anordnung \texttt{E B D F C} erfüllt alle angegebenen Schwierigkeitsabstufungen zwischen den ausgewählten Aufgaben. Es gibt keinen Zyklus im Graphen, sodass eine gültige Reihenfolge möglich ist.
+
+\subsection{Beispiel 2: \texttt{schwierigkeiten3.txt}}
+
+\textbf{Eingabe:}
+
+\begin{verbatim}
+6 14 14
+A < B < C
+C < B < D < A < E < F < G
+H < I < J < K
+I < L < H
+M < N
+N < M
+A B C D E F G H I J K L M N
+\end{verbatim}
+
+\textbf{Ausgabe unseres Programms:}
+
+\begin{verbatim}
+NO GOOD ORDERING POSSIBLE
+\end{verbatim}
+
+\textbf{Erklärung:}
+
+Es existiert ein Zyklus zwischen \texttt{M} und \texttt{N} (\texttt{M < N} und \texttt{N < M}), was zu widersprüchlichen Schwierigkeitsabstufungen führt. Daher kann keine gültige Reihenfolge gefunden werden.
+
+\section{Quellcode}
+
+Hier sind die wichtigsten Teile unseres Codes, jeweils mit Kommentaren zur Erklärung.
+
+\subsection{Einlesen der Daten}
+
+\begin{lstlisting}[style=custompython]
+def read_input(file_path):
+    # Öffnet die Datei und liest alle nicht-leeren Zeilen ein
+    with open(file_path, 'r') as file:
+        lines = [line.strip() for line in file if line.strip()]
+    # Liest n, m, k aus der ersten Zeile
+    n, m, k = map(int, lines[0].split())
+    inequalities = []
+    # Die ausgewählten Aufgaben befinden sich in der letzten Zeile
+    selected_tasks = set(lines[-1].split())
+    # Verarbeitet die Ungleichungen aus den n Klausuren
+    for i in range(1, n + 1):
+        tokens = lines[i].replace(';', '').replace(',', '').split()
+        tasks = [t for t in tokens if t != '<']
+        # Fügt nur Ungleichungen zwischen ausgewählten Aufgaben hinzu
+        for u, v in zip(tasks, tasks[1:]):
+            if u in selected_tasks and v in selected_tasks:
+                inequalities.append((u, v))
+    return inequalities, selected_tasks
+\end{lstlisting}
+
+\subsection{Erstellen des Graphen}
+
+\begin{lstlisting}[style=custompython]
+from collections import defaultdict
+
+def build_graph(inequalities, selected_tasks):
+    graph = defaultdict(list)
+    in_degree = defaultdict(int)
+    # Initialisiert den Eingangsgrad aller ausgewählten Aufgaben
+    for task in selected_tasks:
+        in_degree[task] = 0
+    # Erstellt den Graphen und berechnet die Eingangsgrade
+    for u, v in inequalities:
+        graph[u].append(v)
+        in_degree[v] += 1
+    # Sortiert die Nachbarn für konsistente Verarbeitung
+    for node in graph:
+        graph[node] = sorted(graph[node])
+    return graph, in_degree
+\end{lstlisting}
+
+\subsection{Topologisches Sortieren}
+
+\begin{lstlisting}[style=custompython]
+from collections import deque
+
+def topological_sort(graph, in_degree, selected_tasks):
+    # Initialisiert die Warteschlange mit Knoten mit Eingangsgrad 0, sortiert für Konsistenz
+    queue = deque(sorted([node for node in selected_tasks if in_degree[node] == 0]))
+    sorted_order = []
+    while queue:
+        node = queue.popleft()
+        sorted_order.append(node)
+        # Verarbeitet alle Nachbarn des aktuellen Knotens
+        for neighbour in graph.get(node, []):
+            in_degree[neighbour] -= 1
+            # Fügt Nachbarn mit Eingangsgrad 0 zur Warteschlange hinzu
+            if in_degree[neighbour] == 0:
+                queue.append(neighbour)
+        # Sortiert die Warteschlange nach jedem Einfügen für konsistente Ergebnisse
+        queue = deque(sorted(queue))
+    # Überprüft, ob alle ausgewählten Aufgaben sortiert wurden
+    if len(sorted_order) != len(selected_tasks):
+        return None  # Zyklus erkannt
+    return sorted_order
+\end{lstlisting}
+
+\subsection{Hauptfunktion}
+
+\begin{lstlisting}[style=custompython]
+def find_good_ordering(file_path):
+    inequalities, selected_tasks = read_input(file_path)
+    graph, in_degree = build_graph(inequalities, selected_tasks)
+    ordering = topological_sort(graph, in_degree, selected_tasks)
+    if ordering:
+        return ' '.join(ordering)
+    else:
+        return "NO GOOD ORDERING POSSIBLE"
+\end{lstlisting}
+
+\section{Gesamter Code}
+
+Hier ist der vollständige Code unseres Programms, inklusive aller Kommentare:
+
+\begin{lstlisting}[style=custompython]
+from collections import defaultdict, deque
+
+def read_input(file_path):
+    # Öffnet die Datei und liest alle nicht-leeren Zeilen ein
+    with open(file_path, 'r') as file:
+        lines = [line.strip() for line in file if line.strip()]
+    # Liest n, m, k aus der ersten Zeile
+    n, m, k = map(int, lines[0].split())
+    inequalities = []
+    # Die ausgewählten Aufgaben befinden sich in der letzten Zeile
+    selected_tasks = set(lines[-1].split())
+    # Verarbeitet die Ungleichungen aus den n Klausuren
+    for i in range(1, n + 1):
+        tokens = lines[i].replace(';', '').replace(',', '').split()
+        tasks = [t for t in tokens if t != '<']
+        # Fügt nur Ungleichungen zwischen ausgewählten Aufgaben hinzu
+        for u, v in zip(tasks, tasks[1:]):
+            if u in selected_tasks and v in selected_tasks:
+                inequalities.append((u, v))
+    return inequalities, selected_tasks
+
+def build_graph(inequalities, selected_tasks):
+    graph = defaultdict(list)
+    in_degree = defaultdict(int)
+    # Initialisiert den Eingangsgrad aller ausgewählten Aufgaben
+    for task in selected_tasks:
+        in_degree[task] = 0
+    # Erstellt den Graphen und berechnet die Eingangsgrade
+    for u, v in inequalities:
+        graph[u].append(v)
+        in_degree[v] += 1
+    # Sortiert die Nachbarn für konsistente Verarbeitung
+    for node in graph:
+        graph[node] = sorted(graph[node])
+    return graph, in_degree
+
+def topological_sort(graph, in_degree, selected_tasks):
+    # Initialisiert die Warteschlange mit Knoten mit Eingangsgrad 0, sortiert für Konsistenz
+    queue = deque(sorted([node for node in selected_tasks if in_degree[node] == 0]))
+    sorted_order = []
+    while queue:
+        node = queue.popleft()
+        sorted_order.append(node)
+        # Verarbeitet alle Nachbarn des aktuellen Knotens
+        for neighbour in graph.get(node, []):
+            in_degree[neighbour] -= 1
+            # Fügt Nachbarn mit Eingangsgrad 0 zur Warteschlange hinzu
+            if in_degree[neighbour] == 0:
+                queue.append(neighbour)
+        # Sortiert die Warteschlange nach jedem Einfügen für konsistente Ergebnisse
+        queue = deque(sorted(queue))
+    # Überprüft, ob alle ausgewählten Aufgaben sortiert wurden
+    if len(sorted_order) != len(selected_tasks):
+        return None  # Zyklus erkannt
+    return sorted_order
+
+def find_good_ordering(file_path):
+    inequalities, selected_tasks = read_input(file_path)
+    graph, in_degree = build_graph(inequalities, selected_tasks)
+    ordering = topological_sort(graph, in_degree, selected_tasks)
+    if ordering:
+        return ' '.join(ordering)
+    else:
+        return "NO GOOD ORDERING POSSIBLE"
+
+# Beispielaufruf
+if __name__ == "__main__":
+    file_paths = [
+        "schwierigkeiten0.txt",
+        "schwierigkeiten1.txt",
+        "schwierigkeiten2.txt",
+        "schwierigkeiten3.txt",
+        "schwierigkeiten4.txt",
+        "schwierigkeiten5.txt",
+    ]
+    for file_path in file_paths:
+        result = find_good_ordering(file_path)
+        print(f"{file_path}:\n{result}\n")
+\end{lstlisting}
+
+\section{Zusammenfassung}
+
+Mit unserem Programm konnten wir eine gültige Reihenfolge für die ausgewählten Aufgaben finden, sofern keine widersprüchlichen Schwierigkeitsabstufungen vorlagen. Durch die Darstellung der Aufgaben und ihrer Beziehungen als gerichteter Graph und die Anwendung der topologischen Sortierung konnten wir effizient feststellen, ob eine solche Reihenfolge existiert.
+
+Falls der Graph keine Zyklen enthält, liefert das Programm eine konsistente und gültige Anordnung der Aufgaben. Andernfalls erkennt es die Konflikte und meldet, dass keine gute Anordnung möglich ist. Durch das Sortieren der Knoten und der Warteschlange haben wir zudem sichergestellt, dass die Ausgabe bei jedem Programmlauf gleich bleibt, was die Verlässlichkeit des Programms erhöht.
+
+Insgesamt bietet unser Ansatz eine robuste Lösung für das Problem der Aufgabenreihenfolge basierend auf Schwierigkeitsabstufungen und stellt sicher, dass alle gegebenen Bedingungen erfüllt werden.
+
+\end{document}
+

@@ -1,5 +1,5 @@
 import requests
-URL_AUFGABE = "https://bwinf.de/fileadmin/wettbewerbe/bundeswettbewerb/43/1_runde/grabmal4.txt"
+URL_AUFGABE = "https://bwinf.de/fileadmin/wettbewerbe/bundeswettbewerb/43/1_runde/grabmal0.txt"
 GRABMAL_DATA = requests.get(URL_AUFGABE).text
 GRABMAL_DATA_GETRENNT = GRABMAL_DATA.splitlines()
 GRABMAL_DATA_LIST = values = list(map(int, GRABMAL_DATA_GETRENNT))
@@ -50,7 +50,8 @@ def rueckwaertsPropagatioSchleife(schrittListe, aktuellerIndex):
 
 def erstelleAnweisungen(zeitmarken):
    anweisungen = []
-   anweisungen.append(f"Warte {zeitmarken[0]} Minuten, laufe in den Abschnitt 1")
+   anweisungen.append(f"Warte {zeitmarken[0]} Minuten")
+   anweisungen.append(f"laufe in den Abschnitt 1")
    for i in range(1, len(zeitmarken)):
        warteMinuten = zeitmarken[i] - zeitmarken[i - 1]
        anweisungen.append(f"Warte {warteMinuten} Minuten")
@@ -69,7 +70,6 @@ def erstelleAnweisungen(zeitmarken):
        else:
            ergebnisListe.append(anweisungen[index])
        index += 1
-
    anweisungen = ergebnisListe
    return ', '.join(anweisungen)
 

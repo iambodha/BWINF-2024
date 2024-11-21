@@ -1,0 +1,266 @@
+\documentclas{dhbenelux}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{booktabs} % for toprule, midrule, bottomrule in tables
+\usepackage{authblk} % for multiple authors and affiliations
+\usepackage{graphicx} % to inlcude graphics with \includegraphics
+\usepackage{amsmath}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{array}
+\usepackage{tabularx}
+\lstset{extendedchars=true, literate={ö}{{\"o}}1 {ä}{{\"a}}1 {ü}{{\"u}}1 {ß}{{\ss}}1}
+\usepackage{listings}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,          % Enable line breaking
+    columns=fullflexible,
+    frame=single,             % Optional: adds a box around the content
+    breakatwhitespace=false,  % Allows breaking at any character
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space} % Optional: indicator for continued lines
+}
+
+
+
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\bfseries,
+    stringstyle=\color{green!50!black},
+    commentstyle=\color{gray},
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    breaklines=true,
+    showstringspaces=false,
+    frame=single
+}
+
+
+
+\author{Bearbeiter/-innen dieser Aufgabe: Sigma}
+
+\affil{Team-ID: -----}
+\affil{Team-Name: Super Secret}
+\affil{16. November 2024}
+
+\title{Aufgabe 3: Wandertag}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    \noindent {}
+\end{abstract}
+
+\section{Einführung}
+
+Aufgabe 3 ist ein NP-schweres Problem, bei dem es darum geht, drei Punkte zu finden die, die meisten inklusiven Bereiche abdecken. Ziel ist es, eine Auswahl dieser Punkte zu ermitteln, die die größtmögliche Anzahl an Bereichen ohne Doppelzählung abdeckt. 
+
+\section{Die Erschöpfende Suche}
+
+Die Zeitkomplexität einer erschöpfenden Suche für dieses Problem ist: Bei \(3\) Kandidatenpunkten und \(M\) Bereichen (im Problem bis zu 800 Bereichen) würde der Brute-Force-Ansatz jede mögliche Kombination von 3 Punkten aus der Menge der Kandidatenpunkte bewerten. Die Anzahl der Möglichkeiten, 3 Punkte auszuwählen, ist durch die Kombinationsformel: 
+\[C(N, k) = \binom{N}{k} = \frac{N!}{k!(N-k)!}\]
+gegeben, die cirka \(O(N^3)\) beträgt. Für jede Kombination von 3 Punkten müssen wir prüfen, wie viele der \(M\) Bereiche von diesen Punkten abgedeckt werden. Dazu muss jeder der \(M\)-Bereiche überprüft werden, um festzustellen ob einer der 3  ausgewählten Punkte innerhalb des Bereichs liegt. Diese Prüfung benötigt \(O(M)\) Zeit für jede Kombination. Daher ist die gesamte Zeitkomplexität der erschöpfenden Suche \(O(N^3 \times M)\) wo \(N\) die Anzahl der Kandidatenpunkte und \(M\) die Anzahl der Bereiche ist. Die Erschöpfende Suche ist bei den großen Datensätze extrem ressourcenintensiv.  
+
+
+\section{Die generale Idee von dem program}
+
+Der Datensatz wird von der Website des Wettbewerbs abgerufen. Die Daten enthalten Start- und Endpunkte von Bereichen. Die Optimierung beginnt mit der Erstellung eines Kandidatenpools der nur eindeutige Start und Endpunkte aus den Bereichen des Datensatzes enthält. Dann wird im Voraus berechnet, wie viele Bereiche jeder Punkt abdecken kann. Diese Punkte werden auf der Grundlage ihrer Abdeckung in absteigender Reihenfolge sortiert. Der Code generiert dann alle möglichen Kombinationen aus den 3 Punkten im Canditate-Pool. Um den Prozess zu beschleunigen, werden nur die 60 Punkten mit den meisten abdeckungen benutzt. Für jede Kombination von drei Punkten prüft der Code, wie viele Bereiche abgedeckt werden, und ermittelt die beste Kombination, die die meisten Bereiche abdeckt. Wenn eine Kombination alle Bereiche abdeckt, bricht die Schleife frühzeitig ab. 
+
+
+\section{Das program im detail}
+
+Der Code funktioniert, indem die besten Kombinationen von drei Punkten ermittelt werden, die die maximale Anzahl an abgedeckten Bereichen aus einer gegebenen Menge von Bereichen liefern.
+
+Nachdem die Daten geladen wurden, wird eine Liste von Punkten aus den Bereichsgrenzen erstellt, indem \texttt{candidate\_pool = np.unique(data.flatten())} verwendet wird, wodurch das Datenfeld geglättet und doppelte Werte entfernt werden. Das bedeutet, dass der Code nur Punkte überprüft, die tatsächlich Grenzen von Bereichen sind, wodurch die Berechnungen schnell bleiben.
+
+Als nächstes initialisiert der Code ein Array \texttt{point\_coverage}, um zu speichern, wie viele Bereiche jeder Punkt in \texttt{candidate\_pool} abdecken kann. Für jeden Punkt in \texttt{candidate\_pool} wird geprüft, in wie viele der Bereiche er fällt, indem ein Array erstellt wird, das auswertet, ob ein bestimmter \texttt{Punkt} zwischen \texttt{starts} und \texttt{ends} liegt. Dieses Array wird summiert, um die Gesamtzahl der Bereiche zu ermitteln, die diesen Punkt enthalten. Wenn die Bereiche zum Beispiel [(1,5), (2,6), (4,8)] wären, würde der Punkt \texttt{4} in allen drei Bereichen enthalten sein. Jeder Punkt in \texttt{candidate\_pool} wird auf diese Weise iterativ verarbeitet, und \texttt{point\_coverage} wird mit diesen Zählungen aufgefüllt. Vorher aber generiert der Code alle möglichen Kombinationen der 3 Punkte im Kandidatenpool.
+
+Die Punkte werden dann mit Hilfe von \texttt{sorted\_pairs = np.array(sorted(point\_coverage\_pairs, reverse=True))} nach ihren Abdeckungswerten sortiert.  nach ihren Abdeckungswerten sortiert. In dieser Zeile wird jeder Punkt mit der Anzahl seiner Abdeckung gepaart, nach Abdeckung in absteigender Reihenfolge sortiert und nur die sortierten Punkte gespeichert. Das bedeutet, dass die Punkte mit den höchsten Abdeckungszahlen priorisiert werden, was den nächsten Schritt beschleunigt.
+
+Nun sucht der Code nach der besten Kombination von 3 Punkten. Dazu werden nur die 60 am besten abgedeckten Punkte getestet, da eine erschöpfende Suche in den fällen von großen Datensätze unrealistich ist. Aus diesen 60 Punkten werden 3er-Kombinationen gebildet. Für jede Kombination von 3 Punkten prüft der Code, welche Bereiche durch mindestens einen dieser Punkte abgedeckt sind. Wäre die Kombination zum Beispiel (3, 4, 5), würde er prüfen, ob einer dieser Punkte in jeden Bereich der Daten fällt. Liegt ein Punkt aus der Kombination innerhalb eines Bereichs, wird dieser Bereich zu einer Menge \texttt{covered\_ranges} hinzugefügt, die die eindeutigen Bereiche verfolgt, die von der aktuellen Punktkombination abgedeckt werden.
+
+Nach der Auswertung einer Kombination vergleicht der Code die Anzahl der abgedeckten Bereiche der aktuellen Kombination (\texttt{len(covered\_ranges)}) mit dem bisher gefundenen Maximum. Wenn diese Kombination mehr Bereiche abdeckt, aktualisiert er die beste Lösung. Um die Suche effizienter zu gestalten, wird die Suche vorzeitig abgebrochen, wenn eine Kombination gefunden wird, die alle Bereiche abdeckt (d. h. \texttt{max\_covered == data.shape[0]}). Abschließend findet das Programm die Indizes der Bereiche, die von den drei ausgewählten Punkten abgedeckt werden. Es überprüft, welche Bereiche von den Punkten erfüllt werden, und gibt deren Indizes aus.
+
+
+Schließlich verwendet der Code \texttt{matplotlib}, um unser Ergebnis zu visualisieren.
+
+In dem Diagramm stellt die x-Achse die reelle Zahlengerade dar. Die y-Achse stellt die Anzahl der Bereiche dar, die erfüllt sind. Die roten Punkte stellen die optimale Platzierung der Punkte nach dem Algorithmus dar.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.6\linewidth]{Images/Figure_2.png}
+\caption{Visualisierung von Datensatz 2.}
+\label{fig:figure2}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.6\linewidth]{Images/Figure_1.png}
+\caption{Visualisierung von Datensatz 7.}
+\label{fig:figure1}
+\end{figure}
+
+
+\section{Ergebnis}
+
+Der Algorithmus ermittelt effizient eine nahezu optimale Kombination von 3 Punkten, die die maximale Anzahl von Bereichen abdeckt. Indem es sich auf die 60 Punkte mit der höchsten Abdeckung konzentriert, erreicht das Algorithmus ein Gleichgewicht zwischen Genauigkeit und Leistung. Ohne diese Einschränkung müsste das Algorithmus jede mögliche Kombination von 3 Punkten über alle eindeutigen Grenzen des Datensatzes hinweg prüfen, was die Anzahl der zu bewertenden Kombinationen drastisch erhöhen würde.
+
+Durch die Beschränkung der Suche auf die ersten 60 Punkte wird die Anzahl der Kombinationen reduziert, was überschaubar ist und eine effiziente Ausführung des Algorithmus ermöglicht. Die endgültige Zeitkomplexität beträgt ungefähr $O(n \cdot m + n)$, wobei $m$ aufgrund der 60-Punkte-Beschränkung deutlich kleiner ist. Durch diese Verringerung kann der Algorithmus nahezu optimale Ergebnisse erzielen und gleichzeitig die hohen Rechenkosten einer erschöpfenden Suche vermeiden, so dass auch größere Datensätze verarbeitet werden können. Durch die Eingrenzung auf die besten Kandidaten hält der Algorithmus eine praktische Laufzeit von etwa $O(n)$.
+
+
+
+\section{Quellcode}
+\begin{lstlisting}
+import numpy as np
+import matplotlib.pyplot as plt
+import requests
+import io
+
+URL_AUFGABE = "https://bwinf.de/fileadmin/wettbewerbe/bundeswettbewerb/43/1_runde/wandern2.txt"
+
+response = requests.get(URL_AUFGABE)
+
+data_web = response.content
+data_web_file = io.BytesIO(data_web)
+
+data = np.loadtxt(data_web_file, skiprows=1, dtype=int)
+
+
+candidate_pool = np.unique(data.flatten())  # Kandidatenpool erstellen, wir können Starts und Enden der Bereiche zählen, das letzte Element können wir sicher ignorieren
+
+point_coverage = np.zeros(len(candidate_pool), dtype=int)  # Vorverarbeitung zur Berechnung der Abdeckung für jeden Punkt
+
+for i, point in enumerate(candidate_pool):
+    point_coverage[i] = np.sum((starts <= point) & (point <= ends))  # sehen, wie viele Bereiche durch den Punkt abgedeckt werden
+
+point_coverage_pairs = zip(point_coverage, candidate_pool)
+
+sorted_pairs = np.array(sorted(point_coverage_pairs, reverse=True))  # aufsteigende Reihenfolge
+
+sorted_points = sorted_pairs[:, 1]
+
+def generate_3_combinations(pool):  # alle Kombinationen der 3 Punkte aus dem Kandidatenpool generieren
+    n = len(pool)
+    combinations = []
+    for point_1 in range(n):
+        for point_2 in range(point_1 + 1, n):  # +1 um sicherzustellen, dass es nach point_1 ist
+            for point_3 in range(point_2 + 1, n):
+                combinations.append([pool[point_1], pool[point_2], pool[point_3]])
+    return combinations
+
+max_covered = 0
+best_combination = None
+
+for points in generate_3_combinations(sorted_points[:60]):  # Nur die Top 60 Punkte aus Geschwindigkeitsgründen berücksichtigen ist aber also nur eine Annäherung an die Lösung
+    covered_ranges = set()
+    point_indices = {point: [] for point in points}
+
+    for i in range(data.shape[0]):
+        start, end = data[i, 0], data[i, 1]
+
+        if any(start <= point <= end for point in points):  # für jeden Bereich prüfen, ob der Punkt in einem Bereich liegt
+            covered_ranges.add(i)
+
+    if len(covered_ranges) > max_covered:  # prüfen, ob das aktuelle Beste besser ist als das insgesamt Beste
+        max_covered = len(covered_ranges)
+        best_combination = points
+
+    if max_covered == data.shape[0]:
+        break
+
+print(f"Die optimalen Distanzen sind: {best_combination}, die lösung stellt {max_covered} Personen zufrieden.")
+for point in best_combination:
+    satisfied_indices = [i for i, (start, end) in enumerate(data) if start <= point <= end]
+    print(f"Strecke {point} stellt person(en) {satisfied_indices} zufrieden")
+
+
+\end{lstlisting}
+
+\section{beispiele}
+
+
+
+
+
+\newcommand{\outputheading}[1]{\textbf{\large Beispieleingaben #1}}
+
+
+\outputheading{1}
+
+\begin{lstlisting}
+Die optimalen Distanzen sind: [64, 57, 35], die lösung stellt 6 Personen zufrieden.
+Strecke 64 stellt person(en) [5, 6] zufrieden
+Strecke 57 stellt person(en) [3, 4] zufrieden
+Strecke 35 stellt person(en) [0, 1] zufrieden
+\end{lstlisting}
+
+\outputheading{2}
+
+\begin{lstlisting}
+Die optimalen Distanzen sind: [60, 30, 90], die lösung stellt 6 Personen zufrieden.
+Strecke 60 stellt person(en) [0, 2, 3] zufrieden
+Strecke 30 stellt person(en) [4, 5] zufrieden
+Strecke 90 stellt person(en) [1] zufrieden
+\end{lstlisting}
+
+\outputheading{3}
+
+\begin{lstlisting}
+Die optimalen Distanzen sind: [67, 94, 22], die lösung stellt 10 Personen zufrieden.
+Strecke 67 stellt person(en) [0, 1, 2, 5] zufrieden
+Strecke 94 stellt person(en) [3, 4, 7] zufrieden
+Strecke 22 stellt person(en) [6, 8, 9] zufrieden
+\end{lstlisting}
+
+\outputheading{4}
+
+\begin{lstlisting}
+Die optimalen Distanzen sind: [629, 542, 812], die lösung stellt 69 Personen zufrieden.
+Strecke 629 stellt person(en) [3, 6, 7, 9, 11, ..., 96, 97, 98] zufrieden
+Strecke 542 stellt person(en) [3, 6, 7, 9, 10, ..., 97, 98, 99] zufrieden
+Strecke 812 stellt person(en) [0, 1, 3, 4, 5, ..., 96, 97] zufrieden
+\end{lstlisting}
+
+\outputheading{5}
+
+\begin{lstlisting}
+Die optimalen Distanzen sind: [48563, 58955, 40477], die lösung stellt 120 Personen zufrieden.
+Strecke 48563 stellt person(en) [1, 4, ..., 198, 199] zufrieden
+Strecke 58955 stellt person(en) [1, 4, ..., 196, 197] zufrieden
+Strecke 40477 stellt person(en) [1, 5, ..., 198, 199] zufrieden
+\end{lstlisting}
+
+\outputheading{6}
+
+\begin{lstlisting}
+Die optimalen Distanzen sind: [56322, 42898, 74869], die lösung stellt 284 Personen zufrieden.
+Strecke 56322 stellt person(en) [25, 32, ..., 494, 496] zufrieden
+Strecke 42898 stellt person(en) [0, 9, ..., 490, 496] zufrieden
+Strecke 74869 stellt person(en) [2, 4, ..., 494, 496] zufrieden
+\end{lstlisting}
+
+\outputheading{7}
+
+\begin{lstlisting}
+Die optimalen Distanzen sind: [54056, 51531, 47753], die lösung stellt 337 Personen zufrieden.
+Strecke 54056 stellt person(en) [3, 5, ..., 794, 797] zufrieden
+Strecke 51531 stellt person(en) [3, 5, ..., 794, 797] zufrieden
+Strecke 47753 stellt person(en) [3, 5, ..., 794, 797] zufrieden
+\end{lstlisting}
+
+
+
+\end{document}
