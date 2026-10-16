@@ -1,95 +1,113 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import requests
-import io
+"""Task 3: choose route lengths with the 2024 endpoint-ranking heuristic."""
+import argparse
+from dataclasses import dataclass
 from itertools import combinations
 from math import comb
-
-URL_AUFGABE = "https://bwinf.de/fileadmin/wettbewerbe/bundeswettbewerb/43/1_runde/wandern7.txt"
-
-response = requests.get(URL_AUFGABE)
-
-data_web = response.content
-data_web_file = io.BytesIO(data_web)
+from input_data import read_text
 
 
-data = np.loadtxt(data_web_file, skiprows=1, dtype=int)
-
-starts, ends = data[:, 0].astype(int), data[:, 1].astype(int)
-
-min_val,max_val = starts.min(), ends.max()
-
-
-candidate_pool = np.unique(data.flatten()) #create candidate pool we can count starts and ends of ranges, we can safely ingore last element
-
-
-point_coverage = np.zeros(len(candidate_pool), dtype=int) #pre processing to compute coverage for each point
-
-for i, point in enumerate(candidate_pool):
-  
-    point_coverage[i] = np.sum((starts <= point) & (point <= ends))  # see how many ranges are satisfied by point
+@dataclass(frozen=True)
+class RouteResult:
+    routes: tuple[int, ...]
+    covered: int
+    total: int
+    candidates: int
+    available_candidates: int
 
 
-point_coverage_pairs = zip(point_coverage, candidate_pool)
- 
-sorted_pairs = np.array(sorted(point_coverage_pairs, reverse=True)) # ascending order
+def parse_input(text: str) -> list[tuple[int, int]]:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if not lines:
+        raise ValueError("Input is empty.")
+    count = int(lines[0])
+    if count < 1 or len(lines) != count + 1:
+        raise ValueError("Expected a member count and one interval per member.")
+    intervals = []
+    for line in lines[1:]:
+        start, end = map(int, line.split())
+        if start < 0 or start > end:
+            raise ValueError("Intervals must satisfy 0 <= minimum <= maximum.")
+        intervals.append((start, end))
+    return intervals
 
 
-sorted_points = sorted_pairs[:,1]
+def choose_routes(intervals: list[tuple[int, int]], candidate_limit: int = 60) -> RouteResult:
+    """Search up to three distinct endpoints; count each member once.
+
+    A cap of 60 preserves the original heuristic; 0 searches every endpoint.
+    Bit masks cache membership instead of rescanning every member per triple.
+    """
+    if not intervals or any(start < 0 or start > end for start, end in intervals):
+        raise ValueError("Provide nonempty, ordered, nonnegative intervals.")
+    if candidate_limit < 0:
+        raise ValueError("Candidate limit must be nonnegative; use 0 for all endpoints.")
+    endpoints = sorted({point for interval in intervals for point in interval})
+    masks = {
+        point: sum(1 << i for i, (start, end) in enumerate(intervals) if start <= point <= end)
+        for point in endpoints
+    }
+    ranked = sorted(endpoints, key=lambda p: (masks[p].bit_count(), p), reverse=True)
+    pool = ranked[:candidate_limit] if candidate_limit else ranked
+    best_routes, best_count = (), -1
+    for routes in combinations(pool, min(3, len(pool))):
+        covered = 0
+        for point in routes:
+            covered |= masks[point]
+        count = covered.bit_count()
+        if count > best_count:
+            best_routes, best_count = tuple(sorted(routes)), count
+        if best_count == len(intervals):
+            break
+    return RouteResult(best_routes, best_count, len(intervals), len(pool), len(endpoints))
 
 
+def plot_routes(intervals, result, output: str) -> None:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
 
-def generate_3_combinations(pool): #generate all combinations of the 3 points among the candidate pool
-    n = len(pool)
-    combinations = []
-    for point_1 in range(n):
-        for point_2 in range(point_1 + 1, n): # +1 to make sure it is after points_1
-            for point_3 in range(point_2 + 1, n):
-                combinations.append([pool[point_1], pool[point_2], pool[point_3]])
-    return combinations
-
-
-
-
-max_covered = 0
-best_combination = None
-
-for points in generate_3_combinations(sorted_points[:60]):                # Only consider the top 60 points for speed reasons/ imperfect
-    covered_ranges = set()  
-    
-    for i in range(data.shape[0]):
-        start, end = data[i, 0],  data[i, 1]
-
-        if any(start <= point <= end for point in points): # see for each range if point is in any range 
-            covered_ranges.add(i)  
-
-    if len(covered_ranges) > max_covered:       # see if current best is better than total best
-        max_covered = len(covered_ranges)
-        best_combination = points
-
-    if max_covered == data.shape[0]:
-        break
+    fig, ax = plt.subplots(figsize=(10, max(3, min(10, len(intervals) * 0.3))))
+    for i, (start, end) in enumerate(intervals, 1):
+        ax.plot([start, end], [i, i], color="#64748b", linewidth=3)
+        ax.scatter([start, end], [i, i], color="#64748b", s=16)
+    for point in result.routes:
+        ax.axvline(point, color="#0f766e", linestyle="--", label=f"Route {point}")
+    ax.set(xlabel="Route length", ylabel="Member (input row)",
+           title=f"Wandertag: {result.covered}/{result.total} members covered")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(output, dpi=160)
+    plt.close(fig)
 
 
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("input", help="Input file path or explicit HTTP(S) URL")
+    parser.add_argument("--candidate-limit", type=int, default=60,
+                        help="Ranked endpoints to search (default: 60; 0: all, potentially slow)")
+    parser.add_argument("--plot", metavar="FILE", help="Save a plot; requires matplotlib")
+    args = parser.parse_args()
+    try:
+        intervals = parse_input(read_text(args.input))
+        result = choose_routes(intervals, args.candidate_limit)
+        exhaustive = result.candidates == result.available_candidates
+        print(f"Search: {'all endpoints' if exhaustive else 'capped heuristic'} "
+              f"({result.candidates}/{result.available_candidates} candidates; "
+              f"up to {comb(result.candidates, min(3, result.candidates))} combinations)")
+        print("Route lengths: " + ", ".join(map(str, result.routes)))
+        print(f"Members covered: {result.covered}/{result.total}")
+        for point in result.routes:
+            members = [str(i) for i, (a, b) in enumerate(intervals, 1) if a <= point <= b]
+            print(f"Route {point}: members {', '.join(members)}")
+        print("Member IDs are 1-based input rows; each member is counted once.")
+        if args.plot:
+            plot_routes(intervals, result, args.plot)
+            print(f"Plot saved to {args.plot}")
+    except ImportError:
+        parser.exit(2, "Error: plotting requires matplotlib; install requirements-plot.txt.\n")
+    except (OSError, ValueError) as error:
+        parser.exit(2, f"Error: {error}\n")
 
-print(f"The best combination is {best_combination}, covering {max_covered} ranges and missing {data.shape[0] - max_covered}")
 
-
-counts = np.zeros(max_val - min_val + 2).astype(int) # +2 because it would be +1 without inclusive so we add 2 
-
-np.add.at(counts, starts - min_val, 1) # normalise 
-np.add.at(counts, ends - min_val + 1, -1)# +1 because it is inclusive
-
-results = np.cumsum(counts[:-1]) #slicing last element because it can only be a decrement, only for visualisation
-
-
-
-x_vals = np.arange(min_val, max_val + 1) # need to shift x values to the right
-
-plt.plot(x_vals, results)
-
-plt.scatter(best_combination, [results[point - min_val] for point in best_combination], 
-            color='red', zorder=5)
-
-plt.show()
-
+if __name__ == "__main__":
+    main()
